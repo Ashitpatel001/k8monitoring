@@ -6,6 +6,10 @@ from fastapi import FastAPI
 
 app = FastAPI(title="Victim App")
 
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
 # Holds leaked memory so it is never garbage-collected.
 _leak = []
 

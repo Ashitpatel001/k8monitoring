@@ -26,6 +26,20 @@ from urllib.parse import urlparse, parse_qs
 
 import config_store
 
+# Add CORS headers to all responses for simplicity 
+def _json(self, payload):
+    try:
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+        self.wfile.write(json.dumps(payload).encode("utf-8"))
+    except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError, OSError):
+        pass
+
+
 # Load .env via python-dotenv when available; otherwise fall back to a manual
 # parser so the server still works without the optional dependency.
 try:
@@ -212,6 +226,9 @@ class DashboardAPIHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
     def log_message(self, format, *args):
@@ -219,9 +236,13 @@ class DashboardAPIHandler(BaseHTTPRequestHandler):
         if "/api/events" not in str(args):
             super().log_message(format, *args)
 
+    def handle_healthz(self):
+        self._json({"status": "ok"})
+    
     def do_GET(self):
         parsed_path = urlparse(self.path)
         routes = {
+            "/healthz": self.handle_healthz,
             "/api/status": self.handle_status,
             "/api/events": self.handle_sse,
             "/api/config": self.handle_config,
@@ -262,9 +283,13 @@ class DashboardAPIHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def _json(self, payload):
+        
         try:
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
             self.wfile.write(json.dumps(payload).encode("utf-8"))
         except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError, OSError):
